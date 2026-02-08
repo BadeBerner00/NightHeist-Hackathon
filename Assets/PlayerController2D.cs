@@ -2,6 +2,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(AudioSource))]
 public class PlayerController2D : MonoBehaviour
 {
     [Header("Move")]
@@ -13,6 +14,10 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] float coyoteTime = 0.1f;
     [SerializeField] float jumpBuffer = 0.1f;
 
+    [Header("Jump Audio")]
+    [SerializeField] private AudioClip jumpClip;
+    [Range(0f, 1f)][SerializeField] private float jumpVolume = 0.8f;
+
     [Header("Ground Check")]
     [SerializeField] Transform groundCheck;
     [SerializeField] Vector2 groundCheckSize = new Vector2(0.6f, 0.12f);
@@ -20,6 +25,7 @@ public class PlayerController2D : MonoBehaviour
 
     Rigidbody2D rb;
     Animator anim;
+    AudioSource sfxSource;
 
     float moveX;
     bool grounded;
@@ -30,6 +36,11 @@ public class PlayerController2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
+        sfxSource = GetComponent<AudioSource>();
+
+        // Good defaults for 2D SFX
+        sfxSource.playOnAwake = false;
+        sfxSource.spatialBlend = 0f; // 2D
     }
 
     void Update()
@@ -47,12 +58,13 @@ public class PlayerController2D : MonoBehaviour
         // Timers
         coyoteTimer = grounded ? coyoteTime : Mathf.Max(0f, coyoteTimer - Time.deltaTime);
 
+        // Jump buffer (KeyDown is true only on the frame the key is pressed) :contentReference[oaicite:1]{index=1}
         if (Input.GetKeyDown(jumpKey))
             bufferTimer = jumpBuffer;
         else
             bufferTimer = Mathf.Max(0f, bufferTimer - Time.deltaTime);
 
-        // Jump
+        // Jump (only fires when we actually jump)
         if (bufferTimer > 0f && coyoteTimer > 0f)
         {
             bufferTimer = 0f;
@@ -60,6 +72,10 @@ public class PlayerController2D : MonoBehaviour
 
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+
+            // Play jump SFX (one-shot) :contentReference[oaicite:2]{index=2}
+            if (jumpClip != null)
+                sfxSource.PlayOneShot(jumpClip, jumpVolume);
 
             anim.SetTrigger("Jump");
         }
